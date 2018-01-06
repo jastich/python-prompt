@@ -43,7 +43,7 @@ RE_EMAIL_SIMPLE = re.compile(r"^[^@]+@[^@]+\.[^@]+$")
 """Regular expression for email addresses."""
 
 
-def character(prompt=None, empty=False):
+def character(prompt=None, empty=False, default=None):
     """Prompt a single character.
 
     Parameters
@@ -52,6 +52,8 @@ def character(prompt=None, empty=False):
         Use an alternative prompt.
     empty : bool, optional
         Allow an empty response.
+    default : str, optional
+        Value to return if response is empty.
 
     Returns
     -------
@@ -60,16 +62,19 @@ def character(prompt=None, empty=False):
         None if the user pressed only Enter and ``empty`` was True.
 
     """
-    s = _prompt_input(prompt)
-    if empty and not s:
-        return None
+    s = input(_make_prompt(prompt, default))
+    if not s:
+        if default is not None:
+            return default
+        elif empty:
+            return None
     elif len(s) == 1:
         return s
     else:
         return character(prompt=prompt, empty=empty)
 
 
-def email(prompt=None, empty=False, mode="simple"):
+def email(prompt=None, empty=False, mode="simple", default=None):
     """Prompt an email address.
 
     This check is based on a simple regular expression and does not verify
@@ -84,6 +89,8 @@ def email(prompt=None, empty=False, mode="simple"):
     mode : {'simple'}, optional
         'simple' will use a simple regular expression.
         No other mode is implemented yet.
+    default : str, optional
+        Value to return if response is empty.
 
     Returns
     -------
@@ -93,9 +100,12 @@ def email(prompt=None, empty=False, mode="simple"):
 
     """
     if mode == "simple":
-        s = _prompt_input(prompt)
-        if empty and not s:
-            return None
+        s = input(_make_prompt(prompt, default))
+        if not s:
+            if default is not None:
+                return default
+            elif empty:
+                return None
         else:
             if RE_EMAIL_SIMPLE.match(s):
                 return s
@@ -105,7 +115,7 @@ def email(prompt=None, empty=False, mode="simple"):
         raise ValueError
 
 
-def integer(prompt=None, empty=False):
+def integer(prompt=None, empty=False, default=None):
     """Prompt an integer.
 
     Parameters
@@ -114,6 +124,8 @@ def integer(prompt=None, empty=False):
         Use an alternative prompt.
     empty : bool, optional
         Allow an empty response.
+    default : int, optional
+        Value to return if response is empty.
 
     Returns
     -------
@@ -122,9 +134,12 @@ def integer(prompt=None, empty=False):
         None if the user pressed only Enter and ``empty`` was True.
 
     """
-    s = _prompt_input(prompt)
-    if empty and not s:
-        return None
+    s = input(_make_prompt(prompt, default))
+    if not s:
+        if default is not None:
+            return default
+        elif empty:
+            return None
     else:
         try:
             return int(s)
@@ -132,7 +147,7 @@ def integer(prompt=None, empty=False):
             return integer(prompt=prompt, empty=empty)
 
 
-def real(prompt=None, empty=False):
+def real(prompt=None, empty=False, default=None):
     """Prompt a real number.
 
     Parameters
@@ -141,6 +156,8 @@ def real(prompt=None, empty=False):
         Use an alternative prompt.
     empty : bool, optional
         Allow an empty response.
+    default : float, optional
+        Value to return if response is empty.
 
     Returns
     -------
@@ -149,9 +166,12 @@ def real(prompt=None, empty=False):
         None if the user pressed only Enter and ``empty`` was True.
 
     """
-    s = _prompt_input(prompt)
-    if empty and not s:
-        return None
+    s = input(_make_prompt(prompt, default))
+    if not s:
+        if default is not None:
+            return default
+        elif empty:
+            return None
     else:
         try:
             return float(s)
@@ -159,7 +179,7 @@ def real(prompt=None, empty=False):
             return real(prompt=prompt, empty=empty)
 
 
-def regex(pattern, prompt=None, empty=False, flags=0):
+def regex(pattern, prompt=None, empty=False, flags=0, default=None):
     """Prompt a string that matches a regular expression.
 
     Parameters
@@ -172,6 +192,8 @@ def regex(pattern, prompt=None, empty=False, flags=0):
         Allow an empty response.
     flags : int, optional
         Flags that will be passed to ``re.match``.
+    default : str, optional
+        Value to substitute as input if response is empty.
 
     Returns
     -------
@@ -184,18 +206,21 @@ def regex(pattern, prompt=None, empty=False, flags=0):
     re.match
 
     """
-    s = _prompt_input(prompt)
-    if empty and not s:
-        return None
+    s = input(_make_prompt(prompt, default))
+    if not s:
+        if default is not None:
+            s = default
+        elif empty:
+            return None
+
+    m = re.match(pattern, s, flags=flags)
+    if m:
+        return m
     else:
-        m = re.match(pattern, s, flags=flags)
-        if m:
-            return m
-        else:
-            return regex(pattern, prompt=prompt, empty=empty, flags=flags)
+        return regex(pattern, prompt=prompt, empty=empty, flags=flags)
 
 
-def secret(prompt=None, empty=False):
+def secret(prompt=None, empty=False, default=None):
     """Prompt a string without echoing.
 
     Parameters
@@ -204,6 +229,8 @@ def secret(prompt=None, empty=False):
         Use an alternative prompt.
     empty : bool, optional
         Allow an empty response.
+    default : float, optional
+        Value to return if response is empty.
 
     Returns
     -------
@@ -221,11 +248,12 @@ def secret(prompt=None, empty=False):
     getpass.getpass
 
     """
-    if prompt is None:
-        prompt = PROMPT
-    s = getpass.getpass(prompt=prompt)
-    if empty and not s:
-        return None
+    s = getpass.getpass(prompt=_make_prompt(prompt, default))
+    if not s:
+        if default is not None:
+            return default
+        elif empty:
+            return None
     else:
         if s:
             return s
@@ -233,7 +261,7 @@ def secret(prompt=None, empty=False):
             return secret(prompt=prompt, empty=empty)
 
 
-def string(prompt=None, empty=False):
+def string(prompt=None, empty=False, default=None):
     """Prompt a string.
 
     Parameters
@@ -242,6 +270,8 @@ def string(prompt=None, empty=False):
         Use an alternative prompt.
     empty : bool, optional
         Allow an empty response.
+    default : float, optional
+        Value to return if response is empty.
 
     Returns
     -------
@@ -250,9 +280,12 @@ def string(prompt=None, empty=False):
         None if the user pressed only Enter and ``empty`` was True.
 
     """
-    s = _prompt_input(prompt)
-    if empty and not s:
-        return None
+    s = input(_make_prompt(prompt, default))
+    if not s:
+        if default is not None:
+            return default
+        elif empty:
+            return None
     else:
         if s:
             return s
@@ -260,8 +293,118 @@ def string(prompt=None, empty=False):
             return string(prompt=prompt, empty=empty)
 
 
-def _prompt_input(prompt):
+def choice(choices, instruction='Select one of the following: ',
+           prompt=None, empty=False, default=None):
+    """Prompt for a selection from constrained set of choices.
+
+    Parameters
+    ----------
+    choices : iterable of str
+        Ordered choices for user to select
+    instruction : str, optional
+        Text to appear above available choices
+    prompt : str, optional
+        Use an alternative prompt.
+    empty : bool, optional
+        Allow an empty response
+    default : float, optional
+        Value (found in ``choices``) to return if response is empty.
+
+    Raises
+    ------
+    ValueError
+        If choices is not a sequence of one or more values
+
+    Returns
+    -------
+        An item from ``choices`` if the user selected a choice.
+        None if the user pressed only Enter and ``empty`` was True.
+
+    """
+    choices = tuple(choices)
+    if len(choices) < 1:
+        raise ValueError('Need minimum of one choice!')
+
+    print(instruction)
+    for num, cho in enumerate(choices):
+        print('    {n}: {c}'.format(n=(num + 1), c=cho))
+
+    s = input(_make_prompt(prompt, default))
+
+    try:
+        num = int(s) - 1
+        if num < 0:
+            raise ValueError
+        return choices[num]
+    except (ValueError, IndexError):
+        if not s:
+            if default is not None:
+                return default
+            elif empty:
+                return None
+        else:
+            return choice(choices, instruction, prompt, empty)
+
+
+def boolean(prompt=None, yes='y', no='n', default=None, sensitive=False,
+            partial=True):
+    """Prompt for a yes/no response.
+
+    Parameters
+    ----------
+    prompt : str, optional
+        Use an alternative prompt.
+    yes : str, optional
+        Response corresponding to 'yes'.
+    no : str, optional
+        Response correspnding to 'no'.
+    default : bool, optional
+        The return value if user inputs empty response.
+    sensitive : bool, optional
+        If True, input is case sensitive.
+    partial : bool, optional
+        Can user type 'y' or 'ye' for 'yes' and 'n' for 'no'?
+
+    Returns
+    -------
+    bool
+        Either True (if user selects 'yes') or False (if user selects 'no')
+
+    """
+    def norm(x):
+        return x if sensitive else str(x).lower()
+
+    def to_bool(c):
+        """Business logic for converting input to boolean."""
+        if partial and len(c):
+            if norm(yes).startswith(norm(c)):
+                return True
+            elif norm(no).startswith(norm(c)):
+                return False
+        else:
+            if norm(yes) == norm(c):
+                return True
+            elif norm(no) == norm(c):
+                return False
+        raise ValueError
+
     if prompt is None:
-        return input(PROMPT)
-    else:
-        return input(prompt)
+        y = '[{}]'.format(yes) if default is True else yes
+        n = '[{}]'.format(no) if default is False else no
+        prompt = '{y}/{n}? '.format(y=y, n=n)
+
+    s = input(prompt)
+    if (default is not None) and not s:
+       return default
+
+    try:
+        return to_bool(s)
+    except ValueError:
+        return boolean(prompt=prompt, yes=yes, no=no, default=default,
+                       sensitive=sensitive, partial=partial)
+
+
+def _make_prompt(prompt, default):
+    if not prompt:
+        prompt = '[{}]? '.format(default) if default else PROMPT
+    return prompt

@@ -1,5 +1,6 @@
 import builtins
 import getpass
+import itertools
 
 import pytest
 
@@ -10,9 +11,21 @@ class InputPatch():
     def __init__(self, monkeypatch):
         self.monkeypatch = monkeypatch
 
-    def do(self, string):
-        self.monkeypatch.setattr(builtins, "input", lambda prompt: string)
-        self.monkeypatch.setattr(getpass, "getpass", lambda prompt: string)
+    def do(self, string, callback=None):
+        return self.do_multiple(strings=(string,), callback=callback)
+
+    def do_multiple(self, strings, callback=None):
+        """Cycles through multiple string inputs."""
+        iterator = itertools.cycle(strings)
+
+        def called(prompt):
+            value = next(iterator)
+            if callback:
+                callback(value)
+            return value
+
+        self.monkeypatch.setattr(builtins, "input", called)
+        self.monkeypatch.setattr(getpass, "getpass", called)
 
 
 @pytest.fixture
@@ -62,3 +75,28 @@ def test_secret(input_patch):
 def test_string(input_patch):
     input_patch.do("foo123")
     assert prompt.string() == "foo123"
+
+
+def test_choice(input_patch):
+    input_patch.do('1')
+    assert prompt.choice('moe curly larry'.split()) == 'moe'
+
+
+def test_boolean(input_patch):
+    for yes in 'y ye yes'.split():
+        input_patch.do(yes)
+        assert prompt.boolean(yes='yes')
+
+    for no in 'n no'.split():
+        input_patch.do(no)
+        assert not prompt.boolean(no='no')
+
+    fed = []
+    input_patch.do_multiple('yY', callback=lambda val: fed.append(val))
+    assert prompt.boolean(yes='Y', sensitive=True)
+    assert fed == ['y', 'Y']
+
+    fed = []
+    input_patch.do_multiple('nN', callback=lambda val: fed.append(val))
+    assert not prompt.boolean(no='N', sensitive=True)
+    assert fed == ['n', 'N']
